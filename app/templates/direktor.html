@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Direktor — Ko'z Shifo</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js">
+async function loadBemorlar(q=''){
+  const data = await fetch('/api/bemorlar/tarix?q='+encodeURIComponent(q)).then(r=>r.json());
+  const tbody = document.getElementById('bemorlar_table');
+  tbody.innerHTML = data.length ? data.map(b=>`
+    <tr>
+      <td>${b.ism}</td>
+      <td>${b.telefon}</td>
+      <td><strong>${b.qabullar_soni} ta</strong></td>
+      <td>${b.oxirgi_tashrif}</td>
+      <td>${b.jami_tolov.toLocaleString()} so'm</td>
+      <td><button class="btn btn-primary btn-sm" onclick='showBemorDetail(${JSON.stringify(b)})'>Ko'rish</button></td>
+    </tr>`).join('') : '<tr><td colspan=6 style="text-align:center;color:#a0aec0;padding:2rem">Bemor topilmadi</td></tr>';
+}
+function searchBemor(){
+  const q = document.getElementById('bemor_search').value;
+  loadBemorlar(q);
+}
+function showBemorDetail(b){
+  document.getElementById('bemor_detail_card').style.display='block';
+  document.getElementById('bemor_detail_title').textContent = b.ism + ' — barcha tashriflar';
+  const badges = {naqd:'naqd',terminal:'terminal',aralash:'aralash'};
+  document.getElementById('bemor_detail_table').innerHTML = b.tarix.map(t=>`
+    <tr>
+      <td>${t.sana}</td>
+      <td>${t.shifokor}</td>
+      <td>${t.xizmat}</td>
+      <td>${t.summa.toLocaleString()} so'm</td>
+      <td><span class="badge ${badges[t.tolov_turi]||''}">${t.tolov_turi}</span></td>
+    </tr>`).join('');
+  document.getElementById('bemor_detail_card').scrollIntoView({behavior:'smooth'});
+}
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f4f8}
+.header{background:#2d3748;color:white;padding:1rem 2rem;display:flex;justify-content:space-between;align-items:center}
+.header h1{font-size:1.3rem}
+.nav{display:flex;gap:0.5rem;padding:1rem 2rem;background:white;border-bottom:1px solid #e2e8f0;flex-wrap:wrap}
+.nav button{padding:0.5rem 1.2rem;border:1px solid #e2e8f0;border-radius:8px;background:white;cursor:pointer;font-size:0.9rem}
+.nav button.active{background:#2d3748;color:white;border-color:#2d3748}
+.content{padding:1.5rem 2rem;max-width:1400px;margin:0 auto}
+.section{display:none}.section.active{display:block}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem}
+.stat-card{background:white;border-radius:12px;padding:1.5rem;box-shadow:0 1px 3px rgba(0,0,0,0.1);text-align:center}
+.stat-card .label{font-size:0.85rem;color:#718096;margin-bottom:0.5rem}
+.stat-card .value{font-size:1.8rem;font-weight:700}
+.positive{color:#276749}.negative{color:#c53030}.neutral{color:#2b6cb0}
+.card{background:white;border-radius:12px;padding:1.5rem;box-shadow:0 1px 3px rgba(0,0,0,0.1);margin-bottom:1rem}
+.card h2{font-size:1rem;color:#4a5568;margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:2px solid #e2e8f0}
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+table{width:100%;border-collapse:collapse;font-size:0.9rem}
+th{text-align:left;padding:0.7rem;background:#f7fafc;color:#4a5568;font-weight:600}
+td{padding:0.7rem;border-top:1px solid #e2e8f0}
+label{display:block;font-size:0.85rem;color:#718096;margin-bottom:0.3rem;margin-top:0.8rem}
+input,select{width:100%;padding:0.7rem;border:1px solid #e2e8f0;border-radius:8px;font-size:0.95rem}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.btn{padding:0.7rem 1.5rem;border:none;border-radius:8px;cursor:pointer;font-size:0.95rem;font-weight:600}
+.btn-primary{background:#3182ce;color:white}
+.btn-danger{background:#e53e3e;color:white;padding:0.3rem 0.8rem;font-size:0.8rem}
+.oy-selector{display:flex;gap:1rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap}
+.oy-selector select{width:auto}
+.badge{display:inline-block;padding:0.2rem 0.6rem;border-radius:20px;font-size:0.75rem;font-weight:600}
+.naqd{background:#c6f6d5;color:#276749}
+.terminal{background:#bee3f8;color:#2a69ac}
+.aralash{background:#feebc8;color:#c05621}
+.kun-nav{display:flex;align-items:center;gap:1rem;margin-bottom:1rem}
+.kun-nav button{padding:0.4rem 1rem;border:1px solid #e2e8f0;border-radius:8px;background:white;cursor:pointer}
+.kun-nav button:hover{background:#f7fafc}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>📊 Ko'z Shifo — Direktor paneli</h1>
+  <a href="/" style="color:white;text-decoration:none;font-size:0.9rem">← Bosh sahifa</a>
+</div>
+<div class="nav">
+  <button class="active" onclick="showSection('dashboard',this)">📈 Dashboard</button>
+  <button onclick="showSection('hisobotlar',this)">📋 Hisobotlar</button>
+  <button onclick="showSection('shifokorlar',this)">👨‍⚕️ Shifokorlar</button>
+  <button onclick="showSection('xizmatlar',this)">💊 Xizmatlar</button>
+  <button onclick="showSection('xarajatlar',this)">💸 Xarajatlar</button>
+</div>
+<div class="content">
+
+  <div id="dashboard" class="section active">
+    <div class="oy-selector">
+      <select id="oy_sel" onchange="loadDashboard()">
+        <option value="1">Yanvar</option><option value="2">Fevral</option><option value="3">Mart</option>
+        <option value="4">Aprel</option><option value="5">May</option><option value="6">Iyun</option>
+        <option value="7">Iyul</option><option value="8">Avgust</option><option value="9">Sentabr</option>
+        <option value="10">Oktabr</option><option value="11">Noyabr</option><option value="12">Dekabr</option>
+      </select>
+      <select id="yil_sel" onchange="loadDashboard()"></select>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="label">Tushum</div><div class="value neutral" id="s_tushum">—</div></div>
+      <div class="stat-card"><div class="label">Xarajat</div><div class="value negative" id="s_xarajat">—</div></div>
+      <div class="stat-card"><div class="label">Sof foyda</div><div class="value" id="s_foyda">—</div></div>
+      <div class="stat-card"><div class="label">Bemorlar</div><div class="value neutral" id="s_bemorlar">—</div></div>
+    </div>
+    <div class="charts-grid">
+      <div class="card">
+        <h2>Haftalik tushum (so'm)</h2>
+        <canvas id="haftalikChart" height="200"></canvas>
+      </div>
+      <div class="card">
+        <h2>Haftalik bemorlar</h2>
+        <canvas id="bemorlarChart" height="200"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Shifokorlar samaradorligi (shu oy)</h2>
+      <table>
+        <thead><tr><th>Shifokor</th><th>Qabullar</th><th>Tushum</th></tr></thead>
+        <tbody id="sh_stats"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="hisobotlar" class="section">
+    <div class="card">
+      <h2>Kunlik hisobot</h2>
+      <div class="kun-nav">
+        <button onclick="kunOzgartir(-1)">← Oldingi kun</button>
+        <input type="date" id="kun_sel" style="width:auto" onchange="loadKunlik()">
+        <button onclick="kunOzgartir(1)">Keyingi kun →</button>
+      </div>
+      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
+        <div class="stat-card"><div class="label">Tushum</div><div class="value neutral" id="k_tushum">—</div></div>
+        <div class="stat-card"><div class="label">Bemorlar</div><div class="value neutral" id="k_bemorlar">—</div></div>
+        <div class="stat-card"><div class="label">Sof foyda</div><div class="value" id="k_foyda">—</div></div>
+      </div>
+      <table style="margin-top:1rem">
+        <thead><tr><th>Vaqt</th><th>Bemor</th><th>Shifokor</th><th>Xizmat</th><th>Summa</th><th>To'lov</th></tr></thead>
+        <tbody id="kunlik_table"></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h2>Haftalik ko'rinish</h2>
+      <canvas id="haftalikHisobotChart" height="120"></canvas>
+    </div>
+  </div>
+
+  <div id="shifokorlar" class="section">
+    <div class="card">
+      <h2>Yangi shifokor qo'shish</h2>
+      <div class="form-grid">
+        <div><label>Ism Familiya</label><input type="text" id="sh_ism" placeholder="Doktor Ismi"></div>
+        <div><label>Mutaxassislik</label><input type="text" id="sh_mut" placeholder="Oftalmolog"></div>
+        <div><label>Telefon</label><input type="text" id="sh_tel" placeholder="+998 90 000 00 00"></div>
+        <div><label>Bonus foizi (%)</label><input type="number" id="sh_bonus" placeholder="0" value="0"></div>
+      </div>
+      <div style="margin-top:0.8rem;display:flex;align-items:center;gap:0.5rem">
+        <input type="checkbox" id="sh_tashqi" style="width:auto">
+        <label style="margin:0;display:inline">Tashqi shifokor (boshqa shahardan)</label>
+      </div>
+      <button class="btn btn-primary" style="margin-top:1rem" onclick="addShifokor()">+ Qo'shish</button>
+    </div>
+    <div class="card">
+      <h2>Shifokorlar ro'yxati</h2>
+      <table>
+        <thead><tr><th>Ism</th><th>Mutaxassislik</th><th>Telefon</th><th>Bonus</th><th>Turi</th><th></th></tr></thead>
+        <tbody id="sh_table"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="xizmatlar" class="section">
+    <div class="card">
+      <h2>Yangi xizmat qo'shish</h2>
+      <div class="form-grid">
+        <div><label>Xizmat nomi</label><input type="text" id="xz_nom" placeholder="Ko'z tekshiruvi"></div>
+        <div><label>Narxi (so'm)</label><input type="number" id="xz_narx" placeholder="100000"></div>
+        <div><label>Kategoriya</label><input type="text" id="xz_kat" placeholder="Tekshiruv"></div>
+      </div>
+      <button class="btn btn-primary" style="margin-top:1rem" onclick="addXizmat()">+ Qo'shish</button>
+    </div>
+    <div class="card">
+      <h2>Xizmatlar ro'yxati</h2>
+      <table>
+        <thead><tr><th>Nomi</th><th>Narxi</th><th>Kategoriya</th><th></th></tr></thead>
+        <tbody id="xz_table"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="xarajatlar" class="section">
+    <div class="card">
+      <h2>Yangi xarajat qo'shish</h2>
+      <div class="form-grid">
+        <div><label>Nomi</label><input type="text" id="xr_nom" placeholder="Ijara, maosh..."></div>
+        <div><label>Summa (so'm)</label><input type="number" id="xr_sum" placeholder="500000"></div>
+        <div><label>Kategoriya</label><input type="text" id="xr_kat" placeholder="Ijara"></div>
+        <div><label>Izoh</label><input type="text" id="xr_izoh" placeholder="Ixtiyoriy"></div>
+      </div>
+      <button class="btn btn-primary" style="margin-top:1rem" onclick="addXarajat()">+ Qo'shish</button>
+    </div>
+    <div class="card">
+      <h2>Xarajatlar ro'yxati</h2>
+      <table>
+        <thead><tr><th>Sana</th><th>Nomi</th><th>Kategoriya</th><th>Summa</th><th></th></tr></thead>
+        <tbody id="xr_table"></tbody>
+      </table>
+    </div>
+  </div>
+
+
+<div id="bemorlar" class="section">
+  <div class="card">
+    <h2>Bemorlar tarixi</h2>
+    <div style="margin-bottom:1rem">
+      <input type="text" id="bemor_search" placeholder="Ism bo'yicha qidirish..." oninput="searchBemor()" style="max-width:400px">
+    </div>
+    <table>
+      <thead><tr><th>Ism</th><th>Telefon</th><th>Tashriflar</th><th>Oxirgi tashrif</th><th>Jami to'lov</th><th></th></tr></thead>
+      <tbody id="bemorlar_table"></tbody>
+    </table>
+  </div>
+  <div class="card" id="bemor_detail_card" style="display:none">
+    <h2 id="bemor_detail_title">Bemor tarixi</h2>
+    <table>
+      <thead><tr><th>Sana</th><th>Shifokor</th><th>Xizmat</th><th>Summa</th><th>To'lov</th></tr></thead>
+      <tbody id="bemor_detail_table"></tbody>
+    </table>
+  </div>
+</div>
+</div>
+<script>
+let haftalikChart, bemorlarChart, haftalikHisobotChart;
+
+function showSection(id, btn) { btn = btn || event.target;
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='shifokorlar') loadShifokorlar();
+  if(id==='xizmatlar') loadXizmatlar();
+  if(id==='xarajatlar') loadXarajatlar();
+  if(id==='bemorlar') loadBemorlar();
+  if(id==='hisobotlar') initHisobotlar();
+}
+
+const now = new Date();
+document.getElementById('oy_sel').value = now.getMonth()+1;
+const yilSel = document.getElementById('yil_sel');
+for(let y=2024;y<=2030;y++){const o=document.createElement('option');o.value=y;o.textContent=y;if(y===now.getFullYear())o.selected=true;yilSel.appendChild(o);}
+
+async function loadDashboard(){
+  const oy=document.getElementById('oy_sel').value;
+  const yil=document.getElementById('yil_sel').value;
+  const [stat,shStat,hafta]=await Promise.all([
+    fetch(`/api/statistika/oylik?oy=${oy}&yil=${yil}`).then(r=>r.json()),
+    fetch(`/api/statistika/shifokorlar?oy=${oy}&yil=${yil}`).then(r=>r.json()),
+    fetch('/api/statistika/haftalik').then(r=>r.json())
+  ]);
+  document.getElementById('s_tushum').textContent=stat.tushum.toLocaleString()+' so\'m';
+  document.getElementById('s_xarajat').textContent=stat.xarajat.toLocaleString()+' so\'m';
+  const foydaEl=document.getElementById('s_foyda');
+  foydaEl.textContent=stat.foyda.toLocaleString()+' so\'m';
+  foydaEl.className='value '+(stat.foyda>=0?'positive':'negative');
+  document.getElementById('s_bemorlar').textContent=stat.bemorlar+' ta';
+  document.getElementById('sh_stats').innerHTML=shStat.length?shStat.map(s=>`<tr><td>${s.ism}</td><td>${s.qabullar} ta</td><td>${s.tushum.toLocaleString()} so'm</td></tr>`).join(''):'<tr><td colspan="3" style="text-align:center;color:#a0aec0">Ma\'lumot yo\'q</td></tr>';
+  
+  const kunlar=hafta.map(h=>h.kun);
+  const tushumlar=hafta.map(h=>h.tushum);
+  const bemorlarSoni=hafta.map(h=>h.bemorlar);
+  
+  if(haftalikChart) haftalikChart.destroy();
+  haftalikChart=new Chart(document.getElementById('haftalikChart'),{
+    type:'bar',
+    data:{labels:kunlar,datasets:[{label:'Tushum',data:tushumlar,backgroundColor:'rgba(49,130,206,0.7)',borderRadius:6}]},
+    options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>v.toLocaleString()}}}}
+  });
+  if(bemorlarChart) bemorlarChart.destroy();
+  bemorlarChart=new Chart(document.getElementById('bemorlarChart'),{
+    type:'line',
+    data:{labels:kunlar,datasets:[{label:'Bemorlar',data:bemorlarSoni,borderColor:'#38a169',backgroundColor:'rgba(56,161,105,0.1)',fill:true,tension:0.4}]},
+    options:{responsive:true,plugins:{legend:{display:false}}}
+  });
+}
+
+function initHisobotlar(){
+  const today=new Date().toISOString().split('T')[0];
+  document.getElementById('kun_sel').value=today;
+  loadKunlik();
+  loadHaftalikHisobot();
+}
+
+function kunOzgartir(n){
+  const inp=document.getElementById('kun_sel');
+  const d=new Date(inp.value);
+  d.setDate(d.getDate()+n);
+  inp.value=d.toISOString().split('T')[0];
+  loadKunlik();
+}
+
+async function loadKunlik(){
+  const kun=document.getElementById('kun_sel').value;
+  const data=await fetch(`/api/statistika/kunlik?kun=${kun}`).then(r=>r.json());
+  document.getElementById('k_tushum').textContent=data.tushum.toLocaleString()+' so\'m';
+  document.getElementById('k_bemorlar').textContent=data.bemorlar+' ta';
+  const foydaEl=document.getElementById('k_foyda');
+  foydaEl.textContent=data.foyda.toLocaleString()+' so\'m';
+  foydaEl.className='value '+(data.foyda>=0?'positive':'negative');
+  const tbody=document.getElementById('kunlik_table');
+  tbody.innerHTML=data.qabullar.length?data.qabullar.map(q=>{
+    const bc=q.tolov_turi==='naqd'?'naqd':q.tolov_turi==='terminal'?'terminal':'aralash';
+    return `<tr><td>${q.vaqt}</td><td>${q.bemor}</td><td>${q.shifokor}</td><td>${q.xizmat}</td><td>${q.summa.toLocaleString()}</td><td><span class="badge ${bc}">${q.tolov_turi}</span></td></tr>`;
+  }).join(''):'<tr><td colspan="6" style="text-align:center;color:#a0aec0;padding:2rem">Bu kunda qabul yo\'q</td></tr>';
+}
+
+async function loadHaftalikHisobot(){
+  const hafta=await fetch('/api/statistika/haftalik').then(r=>r.json());
+  if(haftalikHisobotChart) haftalikHisobotChart.destroy();
+  haftalikHisobotChart=new Chart(document.getElementById('haftalikHisobotChart'),{
+    type:'bar',
+    data:{
+      labels:hafta.map(h=>h.sana+' ('+h.kun+')'),
+      datasets:[{label:'Tushum (so\'m)',data:hafta.map(h=>h.tushum),backgroundColor:'rgba(49,130,206,0.7)',borderRadius:6}]
+    },
+    options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>v.toLocaleString()}}}}
+  });
+}
+
+async function loadShifokorlar(){
+  const data=await fetch('/api/shifokorlar').then(r=>r.json());
+  document.getElementById('sh_table').innerHTML=data.map(s=>`<tr><td>${s.ism}</td><td>${s.mutaxassislik||'—'}</td><td>${s.telefon||'—'}</td><td>${s.bonus_foiz}%</td><td>${s.tashqi?'Tashqi':'Doimiy'}</td><td><button class="btn btn-danger" onclick="deleteShifokor(${s.id})">O'chirish</button></td></tr>`).join('');
+}
+
+async function addShifokor(){
+  const ism=document.getElementById('sh_ism').value.trim();
+  if(!ism)return alert('Ism kiriting!');
+  await fetch('/api/shifokorlar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ism,mutaxassislik:document.getElementById('sh_mut').value,telefon:document.getElementById('sh_tel').value,tashqi:document.getElementById('sh_tashqi').checked,bonus_foiz:parseFloat(document.getElementById('sh_bonus').value)||0})});
+  document.getElementById('sh_ism').value='';document.getElementById('sh_mut').value='';document.getElementById('sh_tel').value='';document.getElementById('sh_bonus').value='0';document.getElementById('sh_tashqi').checked=false;
+  loadShifokorlar();
+}
+
+async function deleteShifokor(id){
+  if(!confirm('Shifokorni o\'chirmoqchimisiz?'))return;
+  await fetch('/api/shifokorlar/'+id,{method:'DELETE'});
+  loadShifokorlar();
+}
+
+async function loadXizmatlar(){
+  const data=await fetch('/api/xizmatlar').then(r=>r.json());
+  document.getElementById('xz_table').innerHTML=data.map(x=>`<tr><td>${x.nomi}</td><td>${x.narxi.toLocaleString()} so'm</td><td>${x.kategoriya||'—'}</td><td><button class="btn btn-danger" onclick="deleteXizmat(${x.id})">O'chirish</button></td></tr>`).join('');
+}
+
+async function addXizmat(){
+  const nomi=document.getElementById('xz_nom').value.trim();
+  const narxi=parseFloat(document.getElementById('xz_narx').value);
+  if(!nomi||!narxi)return alert('Nomi va narxini kiriting!');
+  await fetch('/api/xizmatlar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nomi,narxi,kategoriya:document.getElementById('xz_kat').value})});
+  document.getElementById('xz_nom').value='';document.getElementById('xz_narx').value='';document.getElementById('xz_kat').value='';
+  loadXizmatlar();
+}
+
+async function deleteXizmat(id){
+  if(!confirm('Xizmatni o\'chirmoqchimisiz?'))return;
+  await fetch('/api/xizmatlar/'+id,{method:'DELETE'});
+  loadXizmatlar();
+}
+
+async function loadXarajatlar(){
+  const data=await fetch('/api/xarajatlar').then(r=>r.json());
+  document.getElementById('xr_table').innerHTML=data.map(x=>`<tr><td>${x.sana}</td><td>${x.nomi}</td><td>${x.kategoriya||'—'}</td><td>${x.summa.toLocaleString()} so'm</td><td><button class="btn btn-danger" onclick="deleteXarajat(${x.id})">O'chirish</button></td></tr>`).join('');
+}
+
+async function addXarajat(){
+  const nomi=document.getElementById('xr_nom').value.trim();
+  const summa=parseFloat(document.getElementById('xr_sum').value);
+  if(!nomi||!summa)return alert('Nomi va summasini kiriting!');
+  await fetch('/api/xarajatlar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nomi,summa,kategoriya:document.getElementById('xr_kat').value,izoh:document.getElementById('xr_izoh').value})});
+  document.getElementById('xr_nom').value='';document.getElementById('xr_sum').value='';document.getElementById('xr_kat').value='';document.getElementById('xr_izoh').value='';
+  loadXarajatlar();
+}
+
+async function deleteXarajat(id){
+  if(!confirm('Xarajatni o\'chirmoqchimisiz?'))return;
+  await fetch('/api/xarajatlar/'+id,{method:'DELETE'});
+  loadXarajatlar();
+}
+
+loadDashboard(); if(document.getElementById('tx_sh')) initTashqi(); loadSmenaTarix();
+</script>
+</body>
+</html>

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kassa — Ko'z Shifo</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f4f8;min-height:100vh}
+.header{background:#3182ce;color:white;padding:1rem 2rem;display:flex;justify-content:space-between;align-items:center}
+.header h1{font-size:1.3rem}
+.main{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;padding:1.5rem;max-width:1200px;margin:0 auto}
+.card{background:white;border-radius:12px;padding:1.5rem;box-shadow:0 1px 3px rgba(0,0,0,0.1)}
+.card h2{font-size:1rem;color:#4a5568;margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:2px solid #e2e8f0}
+label{display:block;font-size:0.85rem;color:#718096;margin-bottom:0.3rem;margin-top:0.8rem}
+select,input{width:100%;padding:0.7rem;border:1px solid #e2e8f0;border-radius:8px;font-size:1rem;outline:none}
+select:focus,input:focus{border-color:#3182ce}
+.summa-box{background:#ebf8ff;border-radius:8px;padding:1rem;text-align:center;margin:1rem 0}
+.summa-box .label{font-size:0.85rem;color:#2b6cb0}
+.summa-box .amount{font-size:2rem;font-weight:700;color:#2b6cb0}
+.btn{width:100%;padding:1rem;border:none;border-radius:8px;font-size:1.1rem;font-weight:600;cursor:pointer;margin-top:0.5rem}
+.btn-primary{background:#3182ce;color:white}
+.btn-primary:hover{background:#2c5282}
+.btn-success{background:#38a169;color:white}
+.btn-success:hover{background:#276749}
+table{width:100%;border-collapse:collapse;font-size:0.9rem}
+th{text-align:left;padding:0.7rem;background:#f7fafc;color:#4a5568;font-weight:600}
+td{padding:0.7rem;border-top:1px solid #e2e8f0}
+.badge{display:inline-block;padding:0.2rem 0.6rem;border-radius:20px;font-size:0.75rem;font-weight:600}
+.naqd{background:#c6f6d5;color:#276749}
+.terminal{background:#bee3f8;color:#2a69ac}
+.aralash{background:#feebc8;color:#c05621}
+.total-row{background:#f0fff4;font-weight:700}
+#msg{padding:0.8rem;border-radius:8px;text-align:center;display:none;margin-top:0.5rem}
+.success-msg{background:#c6f6d5;color:#276749}
+.error-msg{background:#fed7d7;color:#c53030}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>👁 Ko'z Shifo — Kassa</h1>
+  <span id="sana"></span>
+</div>
+<div class="main">
+  <div class="card">
+    <h2>Yangi qabul</h2>
+    <label>Bemor ismi</label>
+    <input type="text" id="bemor_ism" placeholder="Ism Familiya">
+    <label>Telefon</label>
+    <input type="text" id="bemor_tel" placeholder="+998 90 000 00 00">
+    <label>Shifokor</label>
+    <select id="shifokor_select">
+      <option value="">— Tanlang —</option>
+    </select>
+    <label>Xizmat turi</label>
+    <select id="xizmat_select">
+      <option value="">— Tanlang —</option>
+    </select>
+    <label>To'lov turi</label>
+    <select id="tolov_turi">
+      <option value="naqd">💵 Naqd</option>
+      <option value="terminal">💳 Terminal</option>
+      <option value="aralash">🔄 Aralash</option>
+    </select>
+    <div class="summa-box">
+      <div class="label">To'lov summasi</div>
+      <div class="amount" id="summa_display">0 so'm</div>
+    </div>
+    <button class="btn btn-success" onclick="qabulSaqlash()">✅ Saqlash</button>
+    <div id="msg"></div>
+  </div>
+  <div class="card">
+    <h2>Bugungi qabullar</h2>
+    <table>
+      <thead>
+        <tr><th>Vaqt</th><th>Bemor</th><th>Shifokor</th><th>Xizmat</th><th>Summa</th><th>To'lov</th></tr>
+      </thead>
+      <tbody id="qabullar_table">
+        <tr><td colspan="6" style="text-align:center;color:#a0aec0;padding:2rem">Yuklanmoqda...</td></tr>
+      </tbody>
+    </table>
+    <button class="btn" onclick="smenaYopish()" style="width:100%;padding:1rem;background:#2d3748;color:white;border:none;border-radius:8px;font-size:1rem;font-weight:600;cursor:pointer;margin-bottom:1rem">🔒 Smena yopish</button><div style="margin-top:1rem;padding:1rem;background:#f7fafc;border-radius:8px;display:flex;justify-content:space-between">
+      <span style="color:#4a5568">Bugungi tushum:</span>
+      <strong id="bugun_total" style="color:#276749;font-size:1.1rem">0 so'm</strong>
+    </div>
+  </div>
+</div>
+<script>
+let xizmatlar = [];
+let shifokorlar = [];
+
+document.getElementById('sana').textContent = new Date().toLocaleDateString('uz-UZ', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+
+async function load() {
+  const [sh, xz] = await Promise.all([
+    fetch('/api/shifokorlar').then(r => r.json()),
+    fetch('/api/xizmatlar').then(r => r.json())
+  ]);
+  shifokorlar = sh;
+  xizmatlar = xz;
+  const ss = document.getElementById('shifokor_select');
+  sh.forEach(s => { const o = document.createElement('option'); o.value = s.id; o.textContent = s.ism + (s.tashqi ? ' (tashqi)' : ''); ss.appendChild(o); });
+  const xs = document.getElementById('xizmat_select');
+  xz.forEach(x => { const o = document.createElement('option'); o.value = x.id; o.dataset.narx = x.narxi; o.textContent = x.nomi + ' — ' + x.narxi.toLocaleString() + ' so\'m'; xs.appendChild(o); });
+  loadQabullar();
+}
+
+document.getElementById('xizmat_select').addEventListener('change', function() {
+  const opt = this.options[this.selectedIndex];
+  const narx = opt.dataset.narx || 0;
+  document.getElementById('summa_display').textContent = parseInt(narx).toLocaleString() + ' so\'m';
+});
+
+async function loadQabullar() {
+  const data = await fetch('/api/qabullar/bugun').then(r => r.json());
+  const tbody = document.getElementById('qabullar_table');
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#a0aec0;padding:2rem">Bugun qabul yo\'q</td></tr>'; document.getElementById('bugun_total').textContent = '0 so\'m'; return; }
+  let total = 0;
+  tbody.innerHTML = data.map(q => {
+    total += q.summa;
+    const badgeClass = q.tolov_turi === 'naqd' ? 'naqd' : q.tolov_turi === 'terminal' ? 'terminal' : 'aralash';
+    return `<tr><td>${q.sana}</td><td>${q.bemor}</td><td>${q.shifokor}</td><td>${q.xizmat}</td><td>${q.summa.toLocaleString()}</td><td><span class="badge ${badgeClass}">${q.tolov_turi}</span></td></tr>`;
+  }).join('');
+  document.getElementById('bugun_total').textContent = total.toLocaleString() + ' so\'m';
+}
+
+async function qabulSaqlash() {
+  const bemor_ism = document.getElementById('bemor_ism').value.trim();
+  const shifokor_id = document.getElementById('shifokor_select').value;
+  const xizmat_id = document.getElementById('xizmat_select').value;
+  const tolov_turi = document.getElementById('tolov_turi').value;
+  const msg = document.getElementById('msg');
+  if (!bemor_ism || !shifokor_id || !xizmat_id) { msg.textContent = '❌ Barcha maydonlarni to\'ldiring!'; msg.className = 'error-msg'; msg.style.display = 'block'; return; }
+  const xizmat = xizmatlar.find(x => x.id == xizmat_id);
+  const bemor = await fetch('/api/bemorlar', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ism: bemor_ism, telefon: document.getElementById('bemor_tel').value}) }).then(r => r.json());
+  await fetch('/api/qabullar', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({bemor_id: bemor.id, shifokor_id: parseInt(shifokor_id), xizmat_id: parseInt(xizmat_id), summa: xizmat.narxi, tolov_turi}) });
+  msg.textContent = '✅ Qabul saqlandi!'; msg.className = 'success-msg'; msg.style.display = 'block';
+  document.getElementById('bemor_ism').value = ''; document.getElementById('bemor_tel').value = ''; document.getElementById('shifokor_select').value = ''; document.getElementById('xizmat_select').value = ''; document.getElementById('summa_display').textContent = '0 so\'m';
+  setTimeout(() => { msg.style.display = 'none'; }, 3000);
+  loadQabullar();
+}
+
+load();
+setInterval(loadQabullar, 30000);
+</script>
+</body>
+</html>
+<script>
+async function smenaYopish() {
+  const data = await fetch('/api/smena/bugun').then(r => r.json());
+  if (data.yopilgan) {
+    if (!confirm('Smena allaqachon yopilgan. Qayta yopmoqchimisiz?')) return;
+  }
+  const izoh = prompt('Izoh (ixtiyoriy):', '') || '';
+  await fetch('/api/smena/yopish', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({...data, izoh})
+  });
+  alert('✅ Smena yopildi!\n\nJami tushum: ' + data.jami.toLocaleString() + ' so\'m\nBemorlar: ' + data.bemorlar + ' ta');
+}
+</script>
