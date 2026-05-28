@@ -1,4 +1,5 @@
 from app import db
+from flask_login import UserMixin
 from datetime import datetime
 
 class Shifokor(db.Model):
@@ -81,3 +82,10 @@ class TashqiShifokorXarajat(db.Model):
     izoh = db.Column(db.String(300))
     yaratilgan = db.Column(db.DateTime, default=datetime.utcnow)
     shifokor = db.relationship('Shifokor', backref='tashqi_xarajatlar')
+
+class Foydalanuvchi(UserMixin, db.Model):
+    __tablename__ = 'foydalanuvchilar'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(50), unique=True, nullable=False)
+    parol = db.Column(db.String(200), nullable=False)
+    rol = db.Column(db.String(20), default='kassa')

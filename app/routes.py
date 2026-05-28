@@ -1,20 +1,53 @@
-from flask import Blueprint, request, jsonify, render_template
+from flask import Blueprint, request, jsonify, render_template, redirect, url_for
 from app import db
 from app.models import Shifokor, Xizmat, Bemor, Qabul, Xarajat, Smena
 from datetime import datetime, date
 from sqlalchemy import func
 
 main = Blueprint('main', __name__)
+from flask_login import login_user, logout_user, login_required, current_user
+from werkzeug.security import check_password_hash
+from app.models import Foydalanuvchi
+from app import login_manager
+
+@login_manager.user_loader
+def load_user(user_id):
+    return Foydalanuvchi.query.get(int(user_id))
+
+
+
+
+@main.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        parol = request.form.get('parol')
+        user = Foydalanuvchi.query.filter_by(username=username).first()
+        if user and check_password_hash(user.parol, parol):
+            login_user(user)
+            if user.rol == 'direktor':
+                return redirect('/direktor')
+            return redirect('/kassa')
+        return render_template("login.html", error="Username yoki parol noto'g'ri!")
+    return render_template('login.html', error=None)
+
+@main.route('/logout')
+def logout():
+    logout_user()
+    return redirect('/login')
 
 @main.route('/')
+@login_required
 def index():
     return render_template('index.html')
 
 @main.route('/kassa')
+@login_required
 def kassa():
     return render_template('kassa.html')
 
 @main.route('/direktor')
+@login_required
 def direktor():
     return render_template('direktor.html')
 
